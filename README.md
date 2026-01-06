@@ -20,7 +20,8 @@ This tool is provided purely for personal, non-commercial, educational entertain
 - **Left Arrow / Swipe Left**: Nope (dislike)
 - **Right Arrow / Swipe Right**: Like
 - **Up Arrow / Swipe Up**: Pass (skip without voting)
-- **Down Arrow / Swipe Down**: Hide (permanently remove from rotation)
+- **P** (hold): Peek at name and faction
+- **G**: Gallery of your likes (sorted by faction)
 - **S**: Show results (after 10+ swipes)
 
 ## License

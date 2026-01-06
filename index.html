@@ -44,6 +44,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
 
         .card-image {
@@ -52,6 +53,34 @@
             border-radius: 10px;
             object-fit: contain;
             background: #0f0f1a;
+        }
+
+        .peek-info {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .peek-info.show {
+            display: block;
+        }
+
+        .peek-name {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .peek-faction {
+            color: #e94560;
+            font-size: 0.9rem;
+            font-style: italic;
         }
 
         .controls {
@@ -95,8 +124,8 @@
             font-size: 1rem;
         }
 
-        .btn-hide {
-            background: #636e72;
+        .btn-gallery {
+            background: #00b894;
             color: white;
             padding: 10px 20px;
             font-size: 1rem;
@@ -139,7 +168,7 @@
             margin-top: 20px;
         }
 
-        /* Results Modal */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -166,6 +195,11 @@
             max-width: 550px;
             width: 100%;
             margin: 20px auto;
+        }
+
+        .modal-content.wide {
+            max-width: 95%;
+            width: 95%;
         }
 
         .modal h2 {
@@ -201,21 +235,10 @@
             border-bottom: 1px solid #333;
         }
 
-        .match-item.gold {
-            color: #ffd700;
-        }
-
-        .match-item.green {
-            color: #00b894;
-        }
-
-        .match-item.red {
-            color: #e94560;
-        }
-
-        .match-item.gray {
-            color: #888;
-        }
+        .match-item.gold { color: #ffd700; }
+        .match-item.green { color: #00b894; }
+        .match-item.red { color: #e94560; }
+        .match-item.gray { color: #888; }
 
         .btn-close {
             display: block;
@@ -246,6 +269,48 @@
             margin: 10px 0;
         }
 
+        /* Gallery styles */
+        .gallery-faction {
+            margin-bottom: 30px;
+        }
+
+        .gallery-faction h3 {
+            color: #00b894;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #00b894;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .gallery-item {
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-empty {
+            color: #666;
+            text-align: center;
+            padding: 50px;
+        }
+
         /* Mobile swipe area */
         .swipe-hint {
             display: none;
@@ -255,28 +320,11 @@
         }
 
         @media (max-width: 600px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .btn {
-                padding: 12px 25px;
-                font-size: 1rem;
-            }
-
-            .controls {
-                gap: 15px;
-            }
-
-            .swipe-hint {
-                display: block;
-            }
-        }
-
-        .loading {
-            color: #888;
-            font-size: 1.2rem;
-            padding: 50px;
+            h1 { font-size: 1.8rem; }
+            .btn { padding: 12px 25px; font-size: 1rem; }
+            .controls { gap: 15px; }
+            .swipe-hint { display: block; }
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
         }
     </style>
 </head>
@@ -286,6 +334,10 @@
 
     <div class="card-container">
         <img id="card-image" class="card-image" src="" alt="Model">
+        <div id="peek-info" class="peek-info">
+            <div id="peek-name" class="peek-name"></div>
+            <div id="peek-faction" class="peek-faction"></div>
+        </div>
     </div>
 
     <div class="controls">
@@ -295,6 +347,7 @@
 
     <div class="secondary-controls">
         <button class="btn btn-pass" onclick="swipe('pass')">Pass</button>
+        <button class="btn btn-gallery" onclick="showGallery()">Gallery (G)</button>
     </div>
 
     <button id="results-btn" class="btn btn-results" onclick="showResults()">FIND YOUR MATCH! (S)</button>
@@ -302,43 +355,36 @@
     <div id="counter" class="counter">Swipe 10 more to unlock results!</div>
 
     <div class="hints">
-        <strong>Keyboard:</strong> &larr; NOPE | LIKE &rarr; | &uarr; Pass | S = Results
+        <strong>Keyboard:</strong> &larr; NOPE | LIKE &rarr; | &uarr; Pass | P = Peek | G = Gallery | S = Results
         <div class="swipe-hint">Or swipe left/right on mobile!</div>
     </div>
 
     <!-- Results Modal -->
     <div id="modal" class="modal">
-        <div class="modal-content">
-            <h2>YOUR FACTION MATCHES</h2>
-            <div id="results-content"></div>
+        <div id="modal-content" class="modal-content">
+            <h2 id="modal-title">YOUR FACTION MATCHES</h2>
+            <div id="modal-body"></div>
             <button class="btn-close" onclick="closeModal()">Keep Swiping!</button>
         </div>
     </div>
 
     <script>
-        // Model data - will be populated from models.js
         let models = [];
         let currentIdx = 0;
         let likes = {};
         let dislikes = {};
+        let likedModels = []; // Track actual liked models for gallery
         let swipeCount = 0;
         const minSwipes = 10;
 
-        // Load hidden from localStorage
         let hidden = JSON.parse(localStorage.getItem('infinityHidden') || '[]');
 
-        // Load models data
         async function loadModels() {
             try {
                 const response = await fetch('models.json');
                 const data = await response.json();
-
-                // Filter out hidden
                 models = data.filter(m => !hidden.includes(m.file));
-
-                // Shuffle
                 shuffleArray(models);
-
                 showCurrent();
             } catch (e) {
                 console.error('Error loading models:', e);
@@ -369,7 +415,20 @@
             img.src = 'images/' + model.file;
             img.alt = 'Model';
 
+            // Update peek info (hidden by default)
+            document.getElementById('peek-name').textContent = model.name || model.file.replace('.jpg','').split('_').slice(1).join(' ');
+            document.getElementById('peek-faction').textContent = model.faction;
+            document.getElementById('peek-info').classList.remove('show');
+
             updateCounter();
+        }
+
+        function peek() {
+            document.getElementById('peek-info').classList.add('show');
+        }
+
+        function hidePeek() {
+            document.getElementById('peek-info').classList.remove('show');
         }
 
         function swipe(direction) {
@@ -380,17 +439,11 @@
 
             if (direction === 'like') {
                 likes[faction] = (likes[faction] || 0) + 1;
+                likedModels.push(model);
                 swipeCount++;
             } else if (direction === 'dislike') {
                 dislikes[faction] = (dislikes[faction] || 0) + 1;
                 swipeCount++;
-            } else if (direction === 'hide') {
-                hidden.push(model.file);
-                localStorage.setItem('infinityHidden', JSON.stringify(hidden));
-                models.splice(currentIdx, 1);
-                if (currentIdx >= models.length) currentIdx = 0;
-                showCurrent();
-                return;
             }
             // 'pass' just moves on
 
@@ -420,7 +473,6 @@
         function showResults() {
             if (swipeCount < minSwipes) return;
 
-            // Calculate scores
             const allFactions = new Set([...Object.keys(likes), ...Object.keys(dislikes)]);
             const scores = [];
 
@@ -434,13 +486,10 @@
                 }
             });
 
-            // Sort by percentage
             scores.sort((a, b) => b.pct - a.pct);
 
-            // Build results HTML
             let html = '';
 
-            // High confidence matches (80%+)
             const highConf = scores.filter(s => s.pct >= 80);
             if (highConf.length > 0) {
                 html += '<div class="match-section its-a-match"><h3>IT\'S A MATCH!</h3>';
@@ -451,7 +500,6 @@
                 html += '<div class="divider gold"></div>';
             }
 
-            // Best matches
             html += '<div class="match-section best"><h3>BEST MATCHES</h3>';
             scores.slice(0, 3).forEach(s => {
                 const cls = s.pct >= 80 ? 'gold' : 'green';
@@ -459,7 +507,6 @@
             });
             html += '</div>';
 
-            // Worst matches
             if (scores.length > 3) {
                 html += '<div class="divider"></div>';
                 html += '<div class="match-section worst"><h3>NOT YOUR STYLE</h3>';
@@ -469,7 +516,6 @@
                 html += '</div>';
             }
 
-            // Full breakdown
             html += '<div class="divider"></div>';
             html += '<div class="match-section"><h3 style="color:#6c5ce7">FULL BREAKDOWN</h3>';
             scores.forEach(s => {
@@ -481,7 +527,47 @@
             });
             html += '</div>';
 
-            document.getElementById('results-content').innerHTML = html;
+            document.getElementById('modal-title').textContent = 'YOUR FACTION MATCHES';
+            document.getElementById('modal-content').classList.remove('wide');
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function showGallery() {
+            if (likedModels.length === 0) {
+                document.getElementById('modal-title').textContent = 'YOUR LIKES';
+                document.getElementById('modal-content').classList.add('wide');
+                document.getElementById('modal-body').innerHTML = '<div class="gallery-empty">No likes yet! Start swiping right on models you like.</div>';
+                document.getElementById('modal').classList.add('show');
+                return;
+            }
+
+            // Group by faction
+            const byFaction = {};
+            likedModels.forEach(m => {
+                if (!byFaction[m.faction]) byFaction[m.faction] = [];
+                byFaction[m.faction].push(m);
+            });
+
+            // Sort factions alphabetically
+            const sortedFactions = Object.keys(byFaction).sort();
+
+            let html = '';
+            sortedFactions.forEach(faction => {
+                html += `<div class="gallery-faction">`;
+                html += `<h3>${faction} (${byFaction[faction].length})</h3>`;
+                html += `<div class="gallery-grid">`;
+                byFaction[faction].forEach(m => {
+                    html += `<div class="gallery-item" title="${m.name || m.file}">`;
+                    html += `<img src="images/${m.file}" alt="${m.name || 'Model'}">`;
+                    html += `</div>`;
+                });
+                html += `</div></div>`;
+            });
+
+            document.getElementById('modal-title').textContent = `YOUR LIKES (${likedModels.length})`;
+            document.getElementById('modal-content').classList.add('wide');
+            document.getElementById('modal-body').innerHTML = html;
             document.getElementById('modal').classList.add('show');
         }
 
@@ -501,6 +587,14 @@
                 case 'ArrowUp':
                     swipe('pass');
                     break;
+                case 'p':
+                case 'P':
+                    peek();
+                    break;
+                case 'g':
+                case 'G':
+                    showGallery();
+                    break;
                 case 's':
                 case 'S':
                     showResults();
@@ -508,6 +602,12 @@
                 case 'Escape':
                     closeModal();
                     break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'p' || e.key === 'P') {
+                hidePeek();
             }
         });
 
@@ -526,7 +626,6 @@
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
 
-            // Horizontal swipe
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
                 if (diffX > 0) {
                     swipe('like');
@@ -534,7 +633,6 @@
                     swipe('dislike');
                 }
             }
-            // Vertical swipe (up = pass)
             else if (diffY < -50) {
                 swipe('pass');
             }
