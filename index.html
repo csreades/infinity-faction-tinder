@@ -600,6 +600,8 @@
 
         function closeModal() {
             document.getElementById('modal').classList.remove('show');
+            // Refresh the current image to ensure it displays correctly
+            showCurrent();
         }
 
         // Keyboard controls
