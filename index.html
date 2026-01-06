@@ -295,7 +295,6 @@
 
     <div class="secondary-controls">
         <button class="btn btn-pass" onclick="swipe('pass')">Pass</button>
-        <button class="btn btn-hide" onclick="swipe('hide')">Hide</button>
     </div>
 
     <button id="results-btn" class="btn btn-results" onclick="showResults()">FIND YOUR MATCH! (S)</button>
@@ -303,7 +302,7 @@
     <div id="counter" class="counter">Swipe 10 more to unlock results!</div>
 
     <div class="hints">
-        <strong>Keyboard:</strong> &larr; NOPE | LIKE &rarr; | &uarr; Pass | &darr; Hide | S = Results
+        <strong>Keyboard:</strong> &larr; NOPE | LIKE &rarr; | &uarr; Pass | S = Results
         <div class="swipe-hint">Or swipe left/right on mobile!</div>
     </div>
 
@@ -502,9 +501,6 @@
                 case 'ArrowUp':
                     swipe('pass');
                     break;
-                case 'ArrowDown':
-                    swipe('hide');
-                    break;
                 case 's':
                 case 'S':
                     showResults();
@@ -538,13 +534,9 @@
                     swipe('dislike');
                 }
             }
-            // Vertical swipe
-            else if (Math.abs(diffY) > 50) {
-                if (diffY < 0) {
-                    swipe('pass'); // swipe up
-                } else {
-                    swipe('hide'); // swipe down
-                }
+            // Vertical swipe (up = pass)
+            else if (diffY < -50) {
+                swipe('pass');
             }
         });
 
