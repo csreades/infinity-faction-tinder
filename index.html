@@ -124,6 +124,13 @@
             font-size: 1rem;
         }
 
+        .btn-peek {
+            background: #fdcb6e;
+            color: #2d3436;
+            padding: 10px 20px;
+            font-size: 1rem;
+        }
+
         .btn-gallery {
             background: #00b894;
             color: white;
@@ -321,10 +328,15 @@
 
         @media (max-width: 600px) {
             h1 { font-size: 1.8rem; }
-            .btn { padding: 12px 25px; font-size: 1rem; }
-            .controls { gap: 15px; }
+            .btn { padding: 15px 30px; font-size: 1.1rem; }
+            .btn-nope, .btn-like { padding: 18px 35px; font-size: 1.2rem; }
+            .controls { gap: 20px; margin: 20px 0; }
+            .secondary-controls { gap: 10px; flex-wrap: wrap; justify-content: center; }
             .swipe-hint { display: block; }
             .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+            .card-container { padding: 15px; }
+            .card-image { max-height: 300px; }
+            .hints { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -347,7 +359,8 @@
 
     <div class="secondary-controls">
         <button class="btn btn-pass" onclick="swipe('pass')">Pass</button>
-        <button class="btn btn-gallery" onclick="showGallery()">Gallery (G)</button>
+        <button class="btn btn-peek" onclick="togglePeek()">Peek</button>
+        <button class="btn btn-gallery" onclick="showGallery()">Gallery</button>
     </div>
 
     <button id="results-btn" class="btn btn-results" onclick="showResults()">FIND YOUR MATCH! (S)</button>
@@ -423,16 +436,30 @@
             updateCounter();
         }
 
+        let peekVisible = false;
+
         function peek() {
             document.getElementById('peek-info').classList.add('show');
+            peekVisible = true;
         }
 
         function hidePeek() {
             document.getElementById('peek-info').classList.remove('show');
+            peekVisible = false;
+        }
+
+        function togglePeek() {
+            if (peekVisible) {
+                hidePeek();
+            } else {
+                peek();
+            }
         }
 
         function swipe(direction) {
             if (models.length === 0) return;
+
+            hidePeek(); // Hide peek when swiping
 
             const model = models[currentIdx];
             const faction = model.faction;
@@ -611,32 +638,34 @@
             }
         });
 
-        // Touch swipe support
+        // Touch swipe support on card
         let touchStartX = 0;
         let touchStartY = 0;
+        const cardContainer = document.querySelector('.card-container');
 
-        document.addEventListener('touchstart', (e) => {
+        cardContainer.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
-        });
+        }, { passive: true });
 
-        document.addEventListener('touchend', (e) => {
+        cardContainer.addEventListener('touchend', (e) => {
             const touchEndX = e.changedTouches[0].screenX;
             const touchEndY = e.changedTouches[0].screenY;
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
 
-            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            // Only trigger if significant swipe
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
                 if (diffX > 0) {
                     swipe('like');
                 } else {
                     swipe('dislike');
                 }
             }
-            else if (diffY < -50) {
+            else if (diffY < -60) {
                 swipe('pass');
             }
-        });
+        }, { passive: true });
 
         // Initialize
         loadModels();
