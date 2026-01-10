@@ -392,6 +392,12 @@
 
         let hidden = JSON.parse(localStorage.getItem('infinityHidden') || '[]');
 
+        // Session recording
+        const RECORD_API = 'https://script.google.com/macros/s/AKfycbzN-XPxSc3R1W7NQVtfVsMWKlZobkTEMOVrdiXYUch84tCo4jMTxozvNVmYtmybQP-J/exec';
+        const sessionId = crypto.randomUUID();
+        let swipes = []; // Track all swipes for recording
+        let sessionSubmitted = false;
+
         async function loadModels() {
             try {
                 const response = await fetch('models.json');
@@ -464,6 +470,13 @@
             const model = models[currentIdx];
             const faction = model.faction;
 
+            // Record this swipe
+            swipes.push({
+                model: model.file,
+                faction: faction,
+                action: direction
+            });
+
             if (direction === 'like') {
                 likes[faction] = (likes[faction] || 0) + 1;
                 likedModels.push(model);
@@ -497,8 +510,31 @@
             }
         }
 
+        async function submitSession() {
+            if (sessionSubmitted || swipes.length === 0) return;
+
+            try {
+                await fetch(RECORD_API, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        timestamp: new Date().toISOString(),
+                        swipes: swipes
+                    })
+                });
+                sessionSubmitted = true;
+            } catch (e) {
+                console.error('Failed to submit session:', e);
+            }
+        }
+
         function showResults() {
             if (swipeCount < minSwipes) return;
+
+            // Submit session data when viewing results
+            submitSession();
 
             const allFactions = new Set([...Object.keys(likes), ...Object.keys(dislikes)]);
             const scores = [];
@@ -668,6 +704,17 @@
                 swipe('pass');
             }
         }, { passive: true });
+
+        // Submit session on page unload (backup)
+        window.addEventListener('beforeunload', () => {
+            if (!sessionSubmitted && swipes.length > 0) {
+                navigator.sendBeacon(RECORD_API, JSON.stringify({
+                    sessionId: sessionId,
+                    timestamp: new Date().toISOString(),
+                    swipes: swipes
+                }));
+            }
+        });
 
         // Initialize
         loadModels();
