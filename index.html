@@ -393,7 +393,7 @@
         let hidden = JSON.parse(localStorage.getItem('infinityHidden') || '[]');
 
         // Session recording
-        const RECORD_API = 'https://script.google.com/macros/s/AKfycbzN-XPxSc3R1W7NQVtfVsMWKlZobkTEMOVrdiXYUch84tCo4jMTxozvNVmYtmybQP-J/exec';
+        const RECORD_API = 'https://script.google.com/macros/s/AKfycbyxLZa8WfxYcNQDeTAWucCDCmpRQJ9FxCFalhLrav_7mDs2wc0hV0YPYrq-lnmdKPEc/exec';
         const sessionId = crypto.randomUUID();
         let swipes = []; // Track all swipes for recording
         let sessionSubmitted = false;
@@ -522,9 +522,11 @@
             console.log('Submitting session:', payload);
 
             try {
+                // Google Apps Script requires redirect:follow and works best with no-cors
+                // We try with cors first to get response, fallback to no-cors
                 const response = await fetch(RECORD_API, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
                     body: JSON.stringify(payload)
                 });
                 console.log('Submit response status:', response.status);
@@ -532,7 +534,19 @@
                 console.log('Submit response:', text);
                 sessionSubmitted = true;
             } catch (e) {
-                console.error('Failed to submit session:', e);
+                console.error('CORS error, trying no-cors mode:', e);
+                // Fallback: no-cors mode (can't read response but request goes through)
+                try {
+                    await fetch(RECORD_API, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(payload)
+                    });
+                    console.log('Submitted via no-cors (no response available)');
+                    sessionSubmitted = true;
+                } catch (e2) {
+                    console.error('Failed to submit session:', e2);
+                }
             }
         }
 

@@ -11,17 +11,22 @@
 // 8. Click "Deploy" and authorize when prompted
 // 9. Copy the Web app URL - you'll need this for the frontend
 //
+// IMPORTANT: After updating this script, you must create a NEW deployment
+// (Deploy → New deployment), not just save. Copy the new URL if it changes.
+//
 // The script creates two sheets:
 // - "Sessions" - one row per session with metadata
 // - "Swipes" - one row per individual swipe action
 
 function doPost(e) {
+  var output;
+
   try {
-    const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // Get or create Sessions sheet
-    let sessionsSheet = ss.getSheetByName("Sessions");
+    var sessionsSheet = ss.getSheetByName("Sessions");
     if (!sessionsSheet) {
       sessionsSheet = ss.insertSheet("Sessions");
       sessionsSheet.appendRow([
@@ -35,7 +40,7 @@ function doPost(e) {
     }
 
     // Get or create Swipes sheet
-    let swipesSheet = ss.getSheetByName("Swipes");
+    var swipesSheet = ss.getSheetByName("Swipes");
     if (!swipesSheet) {
       swipesSheet = ss.insertSheet("Swipes");
       swipesSheet.appendRow([
@@ -48,13 +53,14 @@ function doPost(e) {
       ]);
     }
 
-    const sessionId = data.sessionId;
-    const timestamp = data.timestamp;
-    const swipes = data.swipes || [];
+    var sessionId = data.sessionId;
+    var timestamp = data.timestamp;
+    var swipes = data.swipes || [];
 
     // Count actions
-    let likes = 0, dislikes = 0, passes = 0;
-    swipes.forEach((swipe, index) => {
+    var likes = 0, dislikes = 0, passes = 0;
+    for (var i = 0; i < swipes.length; i++) {
+      var swipe = swipes[i];
       if (swipe.action === "like") likes++;
       else if (swipe.action === "dislike") dislikes++;
       else if (swipe.action === "pass") passes++;
@@ -63,12 +69,12 @@ function doPost(e) {
       swipesSheet.appendRow([
         sessionId,
         timestamp,
-        index + 1,
+        i + 1,
         swipe.model,
         swipe.faction,
         swipe.action
       ]);
-    });
+    }
 
     // Add session summary row
     sessionsSheet.appendRow([
@@ -80,18 +86,19 @@ function doPost(e) {
       passes
     ]);
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: true, recorded: swipes.length }))
-      .setMimeType(ContentService.MimeType.JSON);
+    output = JSON.stringify({ success: true, recorded: swipes.length });
 
   } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    output = JSON.stringify({ success: false, error: error.toString() });
   }
+
+  // Return with CORS headers
+  return ContentService
+    .createTextOutput(output)
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Handle CORS preflight requests
+// Handle GET requests (for testing)
 function doGet(e) {
   return ContentService
     .createTextOutput(JSON.stringify({ status: "ok", message: "Infinity Faction Tinder API" }))
