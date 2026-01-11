@@ -513,17 +513,23 @@
         async function submitSession() {
             if (sessionSubmitted || swipes.length === 0) return;
 
+            const payload = {
+                sessionId: sessionId,
+                timestamp: new Date().toISOString(),
+                swipes: swipes
+            };
+
+            console.log('Submitting session:', payload);
+
             try {
-                await fetch(RECORD_API, {
+                const response = await fetch(RECORD_API, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sessionId: sessionId,
-                        timestamp: new Date().toISOString(),
-                        swipes: swipes
-                    })
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
                 });
+                console.log('Submit response status:', response.status);
+                const text = await response.text();
+                console.log('Submit response:', text);
                 sessionSubmitted = true;
             } catch (e) {
                 console.error('Failed to submit session:', e);
@@ -708,13 +714,21 @@
         // Submit session on page unload (backup)
         window.addEventListener('beforeunload', () => {
             if (!sessionSubmitted && swipes.length > 0) {
-                navigator.sendBeacon(RECORD_API, JSON.stringify({
+                const payload = JSON.stringify({
                     sessionId: sessionId,
                     timestamp: new Date().toISOString(),
                     swipes: swipes
-                }));
+                });
+                console.log('Sending beacon:', payload);
+                navigator.sendBeacon(RECORD_API, payload);
             }
         });
+
+        // Debug: test the endpoint
+        window.testSubmit = function() {
+            console.log('Testing submit with current swipes:', swipes);
+            submitSession();
+        };
 
         // Initialize
         loadModels();
